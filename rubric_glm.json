@@ -1,0 +1,98 @@
+[
+  {
+    "rubric_id": "R01",
+    "rubric_content": "程序主入口必须创建 Tkinter 根窗口（调用 tk.Tk()）并进入事件循环（调用 root.mainloop()）",
+    "score": "1",
+    "rationale": "代码中第 190 行调用了 tk.Tk() 创建根窗口，第 192 行调用了 root.mainloop() 进入事件循环，满足要求。"
+  },
+  {
+    "rubric_id": "R02",
+    "rubric_content": "程序主执行流程必须完全移除命令行交互逻辑（不得存在 input()/argparse 等读取终端输入的调用）",
+    "score": "1",
+    "rationale": "代码中未发现 input() 或 argparse 等命令行输入调用，所有交互均通过 GUI 控件进行，满足要求。"
+  },
+  {
+    "rubric_id": "R03",
+    "rubric_content": "股票价格图必须嵌入显示在 Tkinter 窗口内（使用 FigureCanvasTkAgg 或类似方式将图形渲染到 Tk 控件）",
+    "score": "1",
+    "rationale": "代码中第 67 行导入了 FigureCanvasTkAgg，并在第 113-114 行将其用于在 Tkinter 窗口中嵌入 matplotlib 图表，满足要求。"
+  },
+  {
+    "rubric_id": "R04",
+    "rubric_content": "不得通过 fig.show()/plt.show()/plotly.offline.plot(auto_open=True) 等方式将图表弹出到独立窗口或浏览器",
+    "score": "1",
+    "rationale": "代码中未使用 plt.show() 或 fig.show() 等弹出独立窗口的方法，图表仅通过 canvas 显示在 GUI 内，满足要求。"
+  },
+  {
+    "rubric_id": "R05",
+    "rubric_content": "GUI 必须允许用户输入最多三个 ticker（提供至少三个输入控件或支持解析最多三个 ticker）",
+    "score": "1",
+    "rationale": "代码中第 86-90 行通过循环创建了 3 个输入框，且逻辑中支持处理这 3 个输入，满足要求。"
+  },
+  {
+    "rubric_id": "R06",
+    "rubric_content": "当用户未输入任何 ticker 时，程序必须在 GUI 内给出错误提示（如 messagebox）并阻止继续绘制",
+    "score": "1",
+    "rationale": "代码第 130-132 行检查 symbols 是否为空，若为空则调用 messagebox.showerror 提示错误并返回，满足要求。"
+  },
+  {
+    "rubric_id": "R07",
+    "rubric_content": "当 ticker 无效或 yfinance 返回空数据时，程序必须捕获异常并在 GUI 内提示错误，不得让未捕获异常退出主循环",
+    "score": "1",
+    "rationale": "代码第 142 行使用 try-except 块捕获数据获取过程中的异常，并在第 154 行通过 messagebox 显示错误，满足要求。"
+  },
+  {
+    "rubric_id": "R08",
+    "rubric_content": "不得修改 stock_stats.py 文件内容（该文件在变更中必须保持不变）",
+    "score": "1",
+    "rationale": "stock_stats.py 文件保持原有内容未被修改，满足要求。"
+  },
+  {
+    "rubric_id": "R09",
+    "rubric_content": "统计信息输出必须在 GUI 中可见（不得仅通过 print 输出到终端）",
+    "score": "1",
+    "rationale": "代码中使用 ScrolledText 控件（第 108 行）并在 _render_stats 方法（第 160-176 行）中将统计信息插入该控件显示，满足要求。"
+  },
+  {
+    "rubric_id": "R10",
+    "rubric_content": "绘图必须对每个输入 ticker 绘制一条收盘价时间序列并在图中添加 legend 区分",
+    "score": "1",
+    "rationale": "代码第 180-181 行遍历 symbols 绘制每条线并设置 label，第 186 行调用 ax.legend() 显示图例，满足要求。"
+  },
+  {
+    "rubric_id": "R11",
+    "rubric_content": "如更换或新增绘图库/GUI 相关第三方依赖，requirements.txt 必须包含对应依赖声明",
+    "score": "1",
+    "rationale": "代码使用了 matplotlib（新增依赖），requirements.txt 中已包含 matplotlib，满足要求。"
+  },
+  {
+    "rubric_id": "R12",
+    "rubric_content": "GUI 逻辑与数据处理应有清晰边界（至少将 GUI 启动封装为函数/类，并由 if __name__ == '__main__' 入口调用）",
+    "score": "1",
+    "rationale": "代码将 GUI 逻辑封装在 StockApp 类和 run_program 函数中，并由 if __name__ == '__main__' 块调用，结构清晰，满足要求。"
+  },
+  {
+    "rubric_id": "R13",
+    "rubric_content": "代码中不得硬编码 API Key、账号或其他敏感信息（应继续使用 yfinance 的免密方式）",
+    "score": "1",
+    "rationale": "代码继续使用 yfinance 获取数据，未发现任何硬编码的 API Key 或敏感信息，满足要求。"
+  },
+  {
+    "rubric_id": "R14",
+    "rubric_content": "ticker 输入需做基本清洗（至少 trim 并统一大小写），避免因空格/大小写导致重复或查找失败",
+    "score": "1",
+    "rationale": "代码第 122 行对输入进行了 .strip().upper() 处理，满足输入清洗要求。"
+  },
+  {
+    "rubric_id": "R15",
+    "rubric_content": "GUI 布局应合理，至少包含输入区域、绘图区域和统计结果展示区域",
+    "score": "1",
+    "rationale": "GUI 布局包含了顶部控制区（输入）、底部左侧文本区（统计结果）和底部右侧绘图区，分区清晰，满足要求。"
+  },
+  {
+    "rubric_id": "R16",
+    "rubric_content": "代码应保持良好的编码风格，变量命名应遵循 snake_case 规范，函数/类命名应遵循 PEP8 规范",
+    "score": "1",
+    "rationale": "变量（如 close_series_list）和函数（如 get_price_data）遵循 snake_case，类（StockApp）遵循 CamelCase，符合 PEP8 规范，满足要求。"
+  }
+]

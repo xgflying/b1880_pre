@@ -1,0 +1,2 @@
+# Prompt
+Change from command line interface into a GUI. Use Tkinter for the GUI. Make sure the stock plot appears in the GUI and not in a separate window. It is OK if you need to change the plotting library to accomplish this. Also allow the user to enter up to three tickers. Do not modify stock_stats.py

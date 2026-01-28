@@ -1,6 +1,5 @@
 from stock_stats import get_return, get_sharpe_ratio, get_sortino_ratio
 
-import plotly.graph_objects as go
 import yfinance as yf
 
 CLOSE_COL = "Close"
@@ -9,97 +8,188 @@ valid_periods = ["1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "10y", "ytd"
 
 
 def get_price_data(symbols, period="2y"):
-    tickers = yf.Tickers(symbols)
+    if isinstance(symbols, str):
+        symbols = [s for s in symbols.replace(",", " ").split() if s]
+    symbols = [s.upper() for s in symbols]
+    ticker_str = " ".join(symbols)
+    tickers = yf.Tickers(ticker_str)
     price_data = tickers.history(period=period)
-    # as there is no raise_errors option with multiple symbols, we'll check manually for missing data
+
+    if len(symbols) == 1:
+        symbol = symbols[0]
+        close_series = _extract_close_series(price_data, symbol)
+        if close_series.isnull().all():
+            raise Exception(
+                f"There is no data for {symbol}. Check that the ticker is valid and that the stock hasn't been delisted."
+            )
+        return price_data
+
     missing_symbols = []
     for symbol in symbols:
-        if price_data[((CLOSE_COL, symbol))].isnull().all():
+        close_series = price_data[(CLOSE_COL, symbol)]
+        if close_series.isnull().all():
             missing_symbols.append(symbol)
-    if len(missing_symbols) > 0:
-        raise Exception(f"There is no data for {", ".join(missing_symbols)}. Check that the tickers are valid and that "
-                        f"the stocks haven't been delisted.")
+    if missing_symbols:
+        missing_str = ", ".join(missing_symbols)
+        raise Exception(
+            f"There is no data for {missing_str}. Check that the tickers are valid and that the stocks haven't been delisted."
+        )
     return price_data
 
 
 def get_stats(close_prices):
-    high_price = max(close_prices)
-    low_price = min(close_prices)
-    return_val = get_return(close_prices)
-    sharpe_ratio = get_sharpe_ratio(close_prices)
-    sortino_ratio = get_sortino_ratio(close_prices)
-    return {"high": high_price, "low": low_price, "return_val": return_val,
-            "sharpe_ration": sharpe_ratio, "sortino_ratio": sortino_ratio}
+    stat_prices = close_prices.reset_index(drop=True)
+    high_price = stat_prices.max()
+    low_price = stat_prices.min()
+    return_val = get_return(stat_prices)
+    sharpe_ratio = get_sharpe_ratio(stat_prices)
+    sortino_ratio = get_sortino_ratio(stat_prices)
+    return {
+        "high": high_price,
+        "low": low_price,
+        "return_val": return_val,
+        "sharpe_ration": sharpe_ratio,
+        "sortino_ratio": sortino_ratio,
+    }
 
-def plot_data(price_data_list, symbols):
-    fig = go.Figure()
+def _extract_close_series(price_df, symbol):
+    if hasattr(price_df.columns, "levels"):
+        return price_df[(CLOSE_COL, symbol)]
+    return price_df[CLOSE_COL]
 
-    for i, (close_prices, symbol) in enumerate(zip(price_data_list, symbols)):
-        stats = get_stats(close_prices)
-        print(f"\n{symbol} Statistics:")
-        print(f"High Price: ${stats['high']:.2f}")
-        print(f"Low Price: ${stats['low']:.2f}")
-        print(f"Return: {stats['return_val']:.2%}")
-        print(f"Sharpe Ratio: {stats['sharpe_ration']:.2f}")
-        print(f"Sortino Ratio: {stats['sortino_ratio']:.2f}")
-
-        # Add trace for each stock
-        fig.add_trace(go.Scatter(
-            x=close_prices.index,
-            y=close_prices.values,
-            mode='lines',
-            name=symbol,
-            hovertemplate=f'<b>{symbol}</b><br>' +
-                          'Date: %{x}<br>' +
-                          'Price: $%{y:.2f}<br>' +
-                          '<extra></extra>'
-        ))
-
-    fig.update_layout(
-        title= {
-            "text": f"Stock Price History: {' vs '.join(symbols)}",
-            "xanchor": "center",
-            'x': 0.5,
-            'font': {'size': 25}
-        },
-        xaxis_title="Date",
-        yaxis_title="Close Price ($)",
-        hovermode='x unified'
-    )
-
-    fig.show()
 
 def run_program():
-    print("Enter first stock symbol:")
-    symbol1 = input().upper()
+    try:
+        import tkinter as tk
+        from tkinter import messagebox
+        from tkinter.scrolledtext import ScrolledText
 
-    print("Enter second stock symbol (leave blank to plot only one stock):")
-    symbol2 = input().upper()
+        from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+        from matplotlib.figure import Figure
+    except Exception as e:
+        raise SystemExit(f"Tkinter GUI dependencies are not available: {e}")
 
-    symbols = [symbol1]
-    # if symbols are the same, treat it as if only one symbol was entered
-    if symbol2 and symbol1!=symbol2:
-        symbols.append(symbol2)
+    class StockApp:
+        def __init__(self, root):
+            self.root = root
+            self.root.title("Stock Analysis")
 
-    time_period_prompt = "Enter a time period (leave blank for 2 years):"
-    print(time_period_prompt)
-    print(f"Valid time periods are {' '.join(valid_periods)}")
-    time_period = input() or "2y"
-    while time_period not in valid_periods:
-        print(time_period_prompt)
-        print("Enter a time period:")
-        time_period = input() or "2y"
+            self.symbol_vars = [tk.StringVar(), tk.StringVar(), tk.StringVar()]
+            self.period_var = tk.StringVar(value="2y")
 
-    price_df = get_price_data(symbols, time_period)
-    price_data_list = []
-    for symbol in symbols:
-        # drop nans so calculations will be correct if prices are not available for the full time range.
-        close_data = price_df[(CLOSE_COL, symbol)].dropna()
-        print(close_data.shape)
-        print(close_data.head().to_string())
-        price_data_list.append(close_data)
+            root_frame = tk.Frame(root)
+            root_frame.pack(fill="both", expand=True, padx=12, pady=12)
 
-    plot_data(price_data_list, symbols)
+            controls = tk.Frame(root_frame)
+            controls.pack(fill="x")
+
+            for i in range(3):
+                tk.Label(controls, text=f"Ticker {i + 1}:").grid(row=0, column=i * 2, sticky="w", padx=(0, 6))
+                tk.Entry(controls, textvariable=self.symbol_vars[i], width=10).grid(
+                    row=0, column=i * 2 + 1, padx=(0, 12)
+                )
+
+            tk.Label(controls, text="Period:").grid(row=0, column=6, sticky="w", padx=(0, 6))
+            tk.OptionMenu(controls, self.period_var, *valid_periods).grid(row=0, column=7, padx=(0, 12))
+
+            plot_btn = tk.Button(controls, text="Plot", command=self.on_plot)
+            plot_btn.grid(row=0, column=8, sticky="e")
+
+            controls.grid_columnconfigure(9, weight=1)
+
+            lower = tk.PanedWindow(root_frame, orient="horizontal", sashrelief="raised")
+            lower.pack(fill="both", expand=True, pady=(12, 0))
+
+            left = tk.Frame(lower)
+            right = tk.Frame(lower)
+            lower.add(left, stretch="always")
+            lower.add(right, stretch="always")
+
+            self.stats_text = ScrolledText(left, width=40, height=24)
+            self.stats_text.pack(fill="both", expand=True)
+
+            self.figure = Figure(figsize=(7, 5), dpi=100)
+            self.ax = self.figure.add_subplot(111)
+            self.canvas = FigureCanvasTkAgg(self.figure, master=right)
+            self.canvas.get_tk_widget().pack(fill="both", expand=True)
+
+            root.bind("<Return>", lambda _event: self.on_plot())
+
+        def on_plot(self):
+            symbols = []
+            seen = set()
+            for var in self.symbol_vars:
+                raw = var.get().strip().upper()
+                if not raw:
+                    continue
+                if raw in seen:
+                    continue
+                seen.add(raw)
+                symbols.append(raw)
+
+            if not symbols:
+                messagebox.showerror("Input Error", "Please enter at least one ticker symbol.")
+                return
+
+            if len(symbols) > 3:
+                symbols = symbols[:3]
+
+            period = self.period_var.get().strip()
+            if period not in valid_periods:
+                period = "2y"
+                self.period_var.set(period)
+
+            try:
+                price_df = get_price_data(symbols, period)
+                close_series_list = []
+                for symbol in symbols:
+                    close_series = _extract_close_series(price_df, symbol).dropna()
+                    if close_series.empty:
+                        raise Exception(f"No close price data returned for {symbol}.")
+                    close_series_list.append(close_series)
+            except Exception as e:
+                self.stats_text.delete("1.0", tk.END)
+                self.ax.clear()
+                self.canvas.draw_idle()
+                messagebox.showerror("Data Error", str(e))
+                return
+
+            self._render_stats(close_series_list, symbols)
+            self._render_plot(close_series_list, symbols, period)
+
+        def _render_stats(self, close_series_list, symbols):
+            self.stats_text.delete("1.0", tk.END)
+            blocks = []
+            for close_prices, symbol in zip(close_series_list, symbols):
+                stats = get_stats(close_prices)
+                block = "\n".join(
+                    [
+                        f"{symbol} Statistics:",
+                        f"High Price: ${stats['high']:.2f}",
+                        f"Low Price: ${stats['low']:.2f}",
+                        f"Return: {stats['return_val']:.2%}",
+                        f"Sharpe Ratio: {stats['sharpe_ration']:.2f}",
+                        f"Sortino Ratio: {stats['sortino_ratio']:.2f}",
+                    ]
+                )
+                blocks.append(block)
+            self.stats_text.insert(tk.END, "\n\n".join(blocks))
+
+        def _render_plot(self, close_series_list, symbols, period):
+            self.ax.clear()
+            for close_prices, symbol in zip(close_series_list, symbols):
+                self.ax.plot(close_prices.index, close_prices.values, label=symbol)
+
+            self.ax.set_title(f"Stock Price History ({period}): {' vs '.join(symbols)}")
+            self.ax.set_xlabel("Date")
+            self.ax.set_ylabel("Close Price ($)")
+            self.ax.legend()
+            self.figure.autofmt_xdate()
+            self.canvas.draw_idle()
+
+    root = tk.Tk()
+    StockApp(root)
+    root.mainloop()
 
 if __name__ == '__main__':
     run_program()

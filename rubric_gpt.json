@@ -1,0 +1,100 @@
+[
+  {
+    "rubric_id": "R01",
+    "rubric_content": "程序主交互界面必须使用 Tkinter 实现（存在 tk.Tk() 创建窗口并调用 mainloop）",
+    "type": "Instruction Following",
+    "necessity": "Explicit",
+    "rationale": "题目明确要求从命令行界面改为 GUI 且使用 Tkinter；通过静态检查入口代码是否创建 Tk 根窗口并进入事件循环即可二元判定。"
+  },
+  {
+    "rubric_id": "R02",
+    "rubric_content": "主执行路径不应再依赖命令行交互（不得在入口流程中使用 input()/argparse 读取 ticker）",
+    "type": "Instruction Following",
+    "necessity": "Implicit",
+    "rationale": "题目要求从 CLI 转为 GUI，意味着用户输入应来自 GUI 控件而非终端交互；可通过静态搜索入口流程中的 input/argparse 使用情况判定。"
+  },
+  {
+    "rubric_id": "R03",
+    "rubric_content": "股票价格图必须嵌入显示在 Tkinter 窗口内（绘图输出绑定到 Tkinter widget，而非外部窗口）",
+    "type": "Instruction Following",
+    "necessity": "Explicit",
+    "rationale": "题目明确要求图表出现在 GUI 中；可通过检查是否使用 FigureCanvasTkAgg、Canvas、Label 显示图片等方式将图形渲染到 Tk 控件内来验证。"
+  },
+  {
+    "rubric_id": "R04",
+    "rubric_content": "不得通过 fig.show()/plt.show()/plotly.offline.plot(auto_open=True) 等方式将图表弹出到独立窗口或浏览器",
+    "type": "Instruction Following",
+    "necessity": "Explicit",
+    "rationale": "题目明确禁止图表出现在 GUI 外；可静态检查代码中是否调用会打开独立窗口/浏览器的展示 API 来二元判定。"
+  },
+  {
+    "rubric_id": "R05",
+    "rubric_content": "GUI 必须允许用户输入最多三个 ticker（UI 字段或解析逻辑支持 1～3 个股票代码）",
+    "type": "Instruction Following",
+    "necessity": "Explicit",
+    "rationale": "题目明确要求最多三个 ticker；可通过静态检查是否提供 3 个输入控件或支持解析最多 3 个 ticker 并在逻辑中限制上限来验证。"
+  },
+  {
+    "rubric_id": "R06",
+    "rubric_content": "当用户未输入任何 ticker 时，程序必须在 GUI 内给出错误提示并阻止继续绘制（不应直接崩溃）",
+    "type": "Correctness",
+    "necessity": "Implicit",
+    "rationale": "GUI 输入需要基本校验以避免空输入导致异常；可检查是否对 ticker 列表为空的情况进行分支处理并触发 messagebox/界面提示来判定。"
+  },
+  {
+    "rubric_id": "R07",
+    "rubric_content": "当 ticker 无效或 yfinance 返回空数据时，程序必须捕获异常并在 GUI 内提示错误，不得让未捕获异常退出主循环",
+    "type": "Correctness",
+    "necessity": "Implicit",
+    "rationale": "网络/数据源失败是常见边界条件，GUI 应稳定运行；可通过静态检查数据获取与绘图调用周围是否有 try/except 以及是否将错误反馈到 GUI 来验证。"
+  },
+  {
+    "rubric_id": "R08",
+    "rubric_content": "不得修改 stock_stats.py 文件内容（该文件在变更中必须保持不变）",
+    "type": "Instruction Following",
+    "necessity": "Explicit",
+    "rationale": "题目明确约束不允许修改 stock_stats.py；可基于代码变更(diff)判断该文件是否被改动，满足则 1 分否则 0 分。"
+  },
+  {
+    "rubric_id": "R09",
+    "rubric_content": "统计信息输出应在 GUI 中可见（不得只通过 print 输出到终端作为唯一展示方式）",
+    "type": "Instruction Following",
+    "necessity": "Implicit",
+    "rationale": "从 CLI 迁移到 GUI 的核心是用户无需依赖终端查看结果；可静态检查是否存在 Text/Label 等控件承载统计结果，且无仅终端输出的单一路径。"
+  },
+  {
+    "rubric_id": "R10",
+    "rubric_content": "绘图必须对每个输入 ticker 绘制一条收盘价时间序列并在图中区分（如 legend/标签）",
+    "type": "Correctness",
+    "necessity": "Implicit",
+    "rationale": "题目目标是对给定股票进行对比可视化；可静态检查是否按 ticker 循环绘制数据并设置 label/legend 来判定。"
+  },
+  {
+    "rubric_id": "R11",
+    "rubric_content": "如更换或新增绘图库/GUI 相关第三方依赖，requirements.txt 必须包含对应依赖声明",
+    "type": "Correctness",
+    "necessity": "Implicit",
+    "rationale": "题目允许更换绘图库但需要可安装可复现；可通过静态比对 import 的第三方库与 requirements.txt 是否包含对应包名来验证。"
+  },
+  {
+    "rubric_id": "R12",
+    "rubric_content": "GUI 逻辑与数据处理应有清晰边界（至少将 GUI 启动封装为函数/类，并由 if __name__ == '__main__' 入口调用）",
+    "type": "Readability & Maintainability",
+    "necessity": "Implicit",
+    "rationale": "GUI 程序长期维护需要避免大量顶层副作用并利于复用/测试；可静态检查是否存在明确入口与封装结构来二元判定。"
+  },
+  {
+    "rubric_id": "R13",
+    "rubric_content": "代码中不得硬编码 API Key、账号或其他敏感信息（应继续使用 yfinance 的免密方式）",
+    "type": "Security",
+    "necessity": "Implicit",
+    "rationale": "金融数据获取常涉及密钥，安全要求是通用隐性约束；可通过静态扫描是否存在形如 key/token/secret 的常量或环境变量泄露打印来判定。"
+  },
+  {
+    "rubric_id": "R14",
+    "rubric_content": "ticker 输入需做基本清洗（至少 trim 并统一大小写），避免因空格/大小写导致重复或查找失败",
+    "type": "Correctness",
+    "necessity": "Implicit",
+    "rationale": "用户输入在 GUI 中更易出现空格与大小写不一致，清洗可减少错误；可静态检查是否对 ticker 调用 strip/upper 等处理并再用于查询来验证。"
+  }
+]
